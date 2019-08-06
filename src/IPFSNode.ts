@@ -178,7 +178,8 @@ class IPFSNode {
           }
           FSE.outputJson(STATS_FILE, currentEntities, () => null);
           this.knownEntities = currentEntities;
-        });
+        })
+        .catch();
     });
   };
 
@@ -198,6 +199,9 @@ class IPFSNode {
       this.id = await this.getId();
       await this.ipfs.pubsub.subscribe(this.room, this.handlePubsubMessage);
       logMonitor(`Joined room: ${this.room}`);
+      logMonitor(
+        `Listening for network: ${NETWORKS[`N${NETWORK_ID}`]} (${NETWORK_ID})`,
+      );
       this.server.listen(HTTP_PORT);
       logMonitor(`Listening on: http://127.0.0.1:${HTTP_PORT}`);
     } catch (error) {
