@@ -37,11 +37,13 @@
     "@colony/colony-js-client": "^1.13.1",
     "debug": "^4.1.0",
     "dotenv": "^8.0.0",
+    "finalhandler": "^1.1.2",
     "fs-extra": "^8.1.0",
     "ipfs": "^0.36.4",
     "ipfs-pubsub-peer-monitor": "^0.0.8",
     "is-ipfs": "^0.6.0",
     "libp2p-webrtc-star": "^0.16.1",
+    "serve-static": "^1.14.1",
     "wrtc": "^0.4.1"
   },
   "resolutions": {

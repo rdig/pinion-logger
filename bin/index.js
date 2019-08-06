@@ -3,7 +3,6 @@ const { default: Pinner } = require('../lib');
 const { config } = require('dotenv');
 const debug = require('debug').default;
 
-const logMonitor = debug('pinion-logger:watch');
 const logError = debug('pinion-logger:error');
 
 if (process.env.NODE_ENV !== 'production') config();
@@ -23,14 +22,9 @@ const pinner = new Pinner(room, {
   ipfsRepo,
 });
 
-pinner
-  .start()
-  .then(() => {
-    logMonitor(`Listening in room ${room}`);
-  })
-  .catch(caughtError => {
-    logError('CRASHED!');
-    logError('Exiting...');
-    logError(caughtError);
-    process.exit(1);
-  });
+pinner.start().catch(caughtError => {
+  logError('CRASHED!');
+  logError('Exiting...');
+  logError(caughtError);
+  process.exit(1);
+});
