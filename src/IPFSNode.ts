@@ -102,90 +102,99 @@ class IPFSNode {
     // Don't handle messages from ourselves
     if (msg.from === this.id) return;
 
-    const { type, payload } = JSON.parse(msg.data.toString());
+    const {
+      type,
+      payload: { address: addressToParse = '0x' },
+    } = JSON.parse(msg.data.toString());
 
-    if (type === PinnerActions.HAVE_HEADS) {
-      const { address: addressToParse = '' } = payload;
+    if (type !== PinnerActions.HAVE_HEADS) {
+      return;
+    }
 
-      if (addressToParse.includes('network.1.colony')) {
-        const [, newColonyAddress] = addressToParse.match(
-          /colony\.(\w+)(?:\.task(?:s|\.(\w+)))?/,
-        );
-        if (
-          this.knownColonies[newColonyAddress] ||
-          this.lastKnownColony === newColonyAddress
-        ) {
-          this.lastKnownColony = newColonyAddress;
-          return;
+    /*
+     * @TODO Proper Network ID handling
+     */
+    if (addressToParse.includes('network.1.colony')) {
+      const [, newColonyAddress] = addressToParse.match(
+        /colony\.(\w+)(?:\.task(?:s|\.(\w+)))?/,
+      );
+      if (
+        this.knownColonies[newColonyAddress] ||
+        this.lastKnownColony === newColonyAddress
+      ) {
+        this.lastKnownColony = newColonyAddress;
+        return;
+      }
+      return FS.readFile('knownColonies.json', (err, colonies) => {
+        if (err) {
+          return FS.writeFile(
+            'knownColonies.json',
+            JSON.stringify({}),
+            () => null,
+          );
         }
-        return FS.readFile('knownColonies.json', (err, colonies) => {
-          if (err) {
-            return FS.writeFile(
+        this.networkClient
+          .then(client =>
+            client.lookupRegisteredENSDomain.call({
+              ensAddress: newColonyAddress,
+            }),
+          )
+          .then(({ domain: newColonyENS }) => {
+            const currentColonies = JSON.parse(colonies.toString());
+            currentColonies[newColonyAddress] = newColonyENS;
+            FS.writeFile(
               'knownColonies.json',
-              JSON.stringify({}),
+              JSON.stringify(currentColonies),
               () => null,
             );
-          }
-          this.networkClient
-            .then(client =>
-              client.lookupRegisteredENSDomain.call({
-                ensAddress: newColonyAddress,
-              }),
-            )
-            .then(({ domain: newColonyENS }) => {
-              const currentColonies = JSON.parse(colonies.toString());
-              currentColonies[newColonyAddress] = newColonyENS;
-              FS.writeFile(
-                'knownColonies.json',
-                JSON.stringify(currentColonies),
-                () => null,
-              );
-              this.knownColonies = currentColonies;
-              this.lastKnownColony = newColonyAddress;
-              colonyDiscoveryLogger(newColonyAddress, newColonyENS);
-            });
-        });
-      }
+            this.knownColonies = currentColonies;
+            this.lastKnownColony = newColonyAddress;
+            colonyDiscoveryLogger(newColonyAddress, newColonyENS);
+          });
+      });
+    }
 
-      if (addressToParse.includes('network.1.user')) {
-        const [, newUserAddress] = addressToParse.match(
-          /user(?:Profile|Metadata|Inbox)\.(.+)/,
-        );
-        if (
-          this.knownUsers[newUserAddress] ||
-          this.lastKnownUser === newUserAddress
-        ) {
-          this.lastKnownUser = newUserAddress;
-          return;
+    /*
+     * @TODO Proper Network ID handling
+     */
+    if (addressToParse.includes('network.1.user')) {
+      const [, newUserAddress] = addressToParse.match(
+        /user(?:Profile|Metadata|Inbox)\.(.+)/,
+      );
+      if (
+        this.knownUsers[newUserAddress] ||
+        this.lastKnownUser === newUserAddress
+      ) {
+        this.lastKnownUser = newUserAddress;
+        return;
+      }
+      return FS.readFile('knownUsers.json', (err, users) => {
+        if (err) {
+          return FS.writeFile(
+            'knownUsers.json',
+            JSON.stringify({}),
+            () => null,
+          );
         }
-        return FS.readFile('knownUsers.json', (err, users) => {
-          if (err) {
-            return FS.writeFile(
+        this.networkClient
+          .then(client =>
+            client.lookupRegisteredENSDomain.call({
+              ensAddress: newUserAddress,
+            }),
+          )
+          .then(({ domain: newUserENS }) => {
+            const currentUsers = JSON.parse(users.toString());
+            currentUsers[newUserAddress] = newUserENS;
+            FS.writeFile(
               'knownUsers.json',
-              JSON.stringify({}),
+              JSON.stringify(currentUsers),
               () => null,
             );
-          }
-          this.networkClient
-            .then(client =>
-              client.lookupRegisteredENSDomain.call({
-                ensAddress: newUserAddress,
-              }),
-            )
-            .then(({ domain: newUserENS }) => {
-              const currentUsers = JSON.parse(users.toString());
-              currentUsers[newUserAddress] = newUserENS;
-              FS.writeFile(
-                'knownUsers.json',
-                JSON.stringify(currentUsers),
-                () => null,
-              );
-              this.knownUsers = currentUsers;
-              this.lastKnownUser = newUserAddress;
-              userDiscoveryLogger(newUserAddress, newUserENS);
-            });
-        });
-      }
+            this.knownUsers = currentUsers;
+            this.lastKnownUser = newUserAddress;
+            userDiscoveryLogger(newUserAddress, newUserENS);
+          });
+      });
     }
   };
 
