@@ -6,7 +6,7 @@
     "build": "tsc -p tsconfig.prod.json",
     "lint": "tsc --noEmit && eslint --fix --ext ts src types",
     "start": "yarn build && DEBUG=pinion-monitor:* bin/index.js",
-    "start:prod": "yarn build && NETWORK_ID=1 NODE_ENV=production DEBUG=pinion-logger:* bin/index.js"
+    "start:prod": "yarn build && NODE_ENV=production DEBUG=pinion-logger:* bin/index.js"
   },
   "author": "Christian Maniewski <chris@colony.io>",
   "contributors": [
