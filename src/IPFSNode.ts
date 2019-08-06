@@ -31,7 +31,6 @@ const configFile =
 const config = require(configFile);
 
 const logMonitor = debug('pinion-monitor:log');
-const logError = debug('pinion-monitor:fault');
 
 const colonyDiscoveryLogger = debug('pinion-monitor:DISCOVERED_NEW_COLONY');
 const userDiscoveryLogger = debug('pinion-monitor:DISCOVERED_NEW_USER');
@@ -44,8 +43,6 @@ class IPFSNode {
   private readonly room: string;
 
   private readyPromise!: Promise<void>;
-
-  private roomMonitor!: PeerMonitor;
 
   private lastKnownColony: string = '0x';
 
@@ -99,21 +96,13 @@ class IPFSNode {
     msg: IPFS.PubsubMessage,
   ): Promise<void> => {
     if (!(msg && msg.from && msg.data)) {
-      logError(`Message is invalid: ${msg}`);
       return;
     }
 
     // Don't handle messages from ourselves
     if (msg.from === this.id) return;
 
-    const { type, to, payload } = JSON.parse(msg.data.toString());
-    const customTypeLogger = debug(`pinion-monitor:${type}`);
-
-    logMonitor(`New Message from: ${msg.from}`);
-    if (to) {
-      customTypeLogger(to);
-    }
-    customTypeLogger('%o', payload);
+    const { type, payload } = JSON.parse(msg.data.toString());
 
     if (type === PinnerActions.HAVE_HEADS) {
       const { address: addressToParse = '' } = payload;
@@ -200,20 +189,6 @@ class IPFSNode {
     }
   };
 
-  private handleNewPeer = (peer: string): void => {
-    logMonitor(`New peer: ${peer}`);
-    const peers = this.roomMonitor['_peers'];
-    logMonitor(`Peers total: ${peers.length}`);
-  };
-
-  private handleLeavePeer = (peer: string): void => {
-    logMonitor(`Peer left: ${peer}`);
-  };
-
-  public getIPFS(): IPFS {
-    return this.ipfs;
-  }
-
   public async getId(): Promise<string> {
     const { id } = await this.ipfs.id();
     return id;
@@ -229,16 +204,9 @@ class IPFSNode {
     this.id = await this.getId();
     await this.ipfs.pubsub.subscribe(this.room, this.handlePubsubMessage);
     logMonitor(`Joined room: ${this.room}`);
-
-    this.roomMonitor = new PeerMonitor(this.ipfs.pubsub, this.room);
-    this.roomMonitor
-      .on('join', this.handleNewPeer)
-      .on('leave', this.handleLeavePeer)
-      .on('error', logError);
   }
 
   public async stop(): Promise<void> {
-    this.roomMonitor.stop();
     await this.ipfs.pubsub.unsubscribe(this.room, this.handlePubsubMessage);
     return this.ipfs.stop();
   }
