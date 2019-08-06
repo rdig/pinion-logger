@@ -3,8 +3,8 @@ const { default: Pinner } = require('../lib');
 const { config } = require('dotenv');
 const debug = require('debug').default;
 
-const logMonitor = debug('pinion-monitor:log');
-const logError = debug('pinion-monitor:fault');
+const logMonitor = debug('pinion-logger:watch');
+const logError = debug('pinion-logger:error');
 
 if (process.env.NODE_ENV !== 'production') config();
 
@@ -26,7 +26,7 @@ const pinner = new Pinner(room, {
 pinner
   .start()
   .then(() => {
-    logMonitor(`Started in room ${room}`);
+    logMonitor(`Listening in room ${room}`);
   })
   .catch(caughtError => {
     logError('CRASHED!');

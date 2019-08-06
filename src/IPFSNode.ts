@@ -2,7 +2,7 @@ import IPFS = require('ipfs');
 import EventEmitter = require('events');
 import debug = require('debug');
 import PeerMonitor = require('ipfs-pubsub-peer-monitor');
-import FS = require('fs');
+import FSE = require('fs-extra');
 import UTIL = require('util');
 import colonyJS = require('@colony/colony-js-client');
 
@@ -41,6 +41,8 @@ const logMonitor = debug('pinion-logger:watch');
 const colonyDiscoveryLogger = debug('pinion-logger:NEW_COLONY');
 const userDiscoveryLogger = debug('pinion-logger:NEW_USER');
 
+const blankStats = { users: {}, colonies: {} };
+
 class IPFSNode {
   private readonly events: EventEmitter;
 
@@ -52,16 +54,9 @@ class IPFSNode {
 
   private lastKnownColony: string = '0x';
 
-  private knownColonies: Record<string, any> = {};
-
   private lastKnownUser: string = '0x';
 
-  private knownUsers: Record<string, any> = {};
-
-  private knownEntities: Record<string, any> = {
-    users: {},
-    colonies: {},
-  };
+  private knownEntities: Record<string, any> = blankStats;
 
   public id: string = '';
 
@@ -91,18 +86,11 @@ class IPFSNode {
     });
     this.room = room;
 
-    FS.readFile('knownColonies.json', (err, colonies) => {
+    FSE.readJson(STATS_FILE, (err, entities) => {
       if (err) {
         return;
       }
-      this.knownColonies = JSON.parse(colonies.toString());
-    });
-
-    FS.readFile('knownUsers.json', (err, users) => {
-      if (err) {
-        return;
-      }
-      this.knownUsers = JSON.parse(users.toString());
+      this.knownEntities = entities;
     });
   }
 
@@ -125,91 +113,61 @@ class IPFSNode {
       return;
     }
 
-    /*
-     * @TODO Proper Network ID handling
-     */
-    if (addressToParse.includes('network.1.colony')) {
-      const [, newColonyAddress] = addressToParse.match(
+    let newColonyAddress, newUserAddress;
+    if (addressToParse.includes(`network.${NETWORK_ID}.colony`)) {
+      newColonyAddress = addressToParse.match(
         /colony\.(\w+)(?:\.task(?:s|\.(\w+)))?/,
-      );
+      )[1];
       if (
-        this.knownColonies[newColonyAddress] ||
+        (this.knownEntities.colonies &&
+          this.knownEntities.colonies[newColonyAddress]) ||
         this.lastKnownColony === newColonyAddress
       ) {
         this.lastKnownColony = newColonyAddress;
         return;
       }
-      return FS.readFile('knownColonies.json', (err, colonies) => {
-        if (err) {
-          return FS.writeFile(
-            'knownColonies.json',
-            JSON.stringify({}),
-            () => null,
-          );
-        }
-        this.networkClient
-          .then(client =>
-            client.lookupRegisteredENSDomain.call({
-              ensAddress: newColonyAddress,
-            }),
-          )
-          .then(({ domain: newColonyENS }) => {
-            const currentColonies = JSON.parse(colonies.toString());
-            currentColonies[newColonyAddress] = newColonyENS;
-            FS.writeFile(
-              'knownColonies.json',
-              JSON.stringify(currentColonies),
-              () => null,
-            );
-            this.knownColonies = currentColonies;
-            this.lastKnownColony = newColonyAddress;
-            colonyDiscoveryLogger(newColonyAddress, newColonyENS);
-          });
-      });
     }
 
-    /*
-     * @TODO Proper Network ID handling
-     */
-    if (addressToParse.includes('network.1.user')) {
-      const [, newUserAddress] = addressToParse.match(
+    if (addressToParse.includes(`network.${NETWORK_ID}.user`)) {
+      newUserAddress = addressToParse.match(
         /user(?:Profile|Metadata|Inbox)\.(.+)/,
-      );
+      )[1];
       if (
-        this.knownUsers[newUserAddress] ||
+        (this.knownEntities.users &&
+          this.knownEntities.users[newUserAddress]) ||
         this.lastKnownUser === newUserAddress
       ) {
         this.lastKnownUser = newUserAddress;
         return;
       }
-      return FS.readFile('knownUsers.json', (err, users) => {
-        if (err) {
-          return FS.writeFile(
-            'knownUsers.json',
-            JSON.stringify({}),
-            () => null,
-          );
-        }
-        this.networkClient
-          .then(client =>
-            client.lookupRegisteredENSDomain.call({
-              ensAddress: newUserAddress,
-            }),
-          )
-          .then(({ domain: newUserENS }) => {
-            const currentUsers = JSON.parse(users.toString());
-            currentUsers[newUserAddress] = newUserENS;
-            FS.writeFile(
-              'knownUsers.json',
-              JSON.stringify(currentUsers),
-              () => null,
-            );
-            this.knownUsers = currentUsers;
-            this.lastKnownUser = newUserAddress;
-            userDiscoveryLogger(newUserAddress, newUserENS);
-          });
-      });
     }
+
+    return FSE.readJson(STATS_FILE, (err, entities) => {
+      if (err) {
+        return FSE.outputJson(STATS_FILE, blankStats, () => null);
+      }
+      this.networkClient
+        .then(client =>
+          client.lookupRegisteredENSDomain.call({
+            ensAddress: newColonyAddress || newUserAddress,
+          }),
+        )
+        .then(({ domain: ensName }) => {
+          const currentEntities = Object.assign({}, entities);
+          const truncatedEnsName = ensName.slice(0, ensName.indexOf('.'));
+          if (newColonyAddress) {
+            currentEntities.colonies[newColonyAddress] = truncatedEnsName;
+            this.lastKnownColony = newColonyAddress;
+            colonyDiscoveryLogger(newColonyAddress, truncatedEnsName);
+          } else {
+            currentEntities.users[newUserAddress] = truncatedEnsName;
+            this.lastKnownUser = newUserAddress;
+            userDiscoveryLogger(newUserAddress, truncatedEnsName);
+          }
+          FSE.outputJson(STATS_FILE, currentEntities, () => null);
+          this.knownEntities = currentEntities;
+        });
+    });
   };
 
   public async getId(): Promise<string> {
@@ -225,8 +183,15 @@ class IPFSNode {
   public async start(): Promise<void> {
     await this.ready();
     this.id = await this.getId();
-    await this.ipfs.pubsub.subscribe(this.room, this.handlePubsubMessage);
-    logMonitor(`Joined room: ${this.room}`);
+    try {
+      await this.ipfs.pubsub.subscribe(this.room, this.handlePubsubMessage);
+      logMonitor(`Joined room: ${this.room}`);
+    } catch (error) {
+      /*
+       * Fail silently
+       */
+      return;
+    }
   }
 
   public async stop(): Promise<void> {

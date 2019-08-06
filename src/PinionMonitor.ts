@@ -32,7 +32,7 @@ class Pinion {
 
   public async start(): Promise<void> {
     await this.ipfsNode.start();
-    logMonitor(`Looger ID: ${this.ipfsNode.id}`);
+    logMonitor(`Logger ID: ${this.ipfsNode.id}`);
   }
 
   public async close(): Promise<void> {
