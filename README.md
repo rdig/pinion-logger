@@ -18,7 +18,7 @@
   </a>
 </div>
 
-# Pinion Monitor
+# Pinion Logger
 
 _**NOTE**: This is a close of the original Pinion, which removes all pinning functionality from the library, as to be used only for debugging purpouses._
 
