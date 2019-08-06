@@ -8,6 +8,7 @@ import colonyJS = require('@colony/colony-js-client');
 
 import customLibp2pBundle from './customLibp2pBundle';
 import { PinnerActions } from './actions';
+import { NETWORKS } from './defaults';
 
 interface Message<T, P> {
   type: T;
@@ -21,7 +22,12 @@ interface Options {
   privateKey?: string;
 }
 
-const { PINION_IPFS_CONFIG_FILE, NODE_ENV } = process.env;
+const {
+  PINION_IPFS_CONFIG_FILE,
+  NODE_ENV,
+  NETWORK_ID = '5',
+  STATS_FILE = 'stats/knownEntities.json',
+} = process.env;
 
 const configFile =
   PINION_IPFS_CONFIG_FILE ||
@@ -52,12 +58,20 @@ class IPFSNode {
 
   private knownUsers: Record<string, any> = {};
 
+  private knownEntities: Record<string, any> = {
+    users: {},
+    colonies: {},
+  };
+
   public id: string = '';
 
-  private networkClient = colonyJS.getNetworkClient('mainnet', {
-    type: 'generic',
-    subtype: 'generic',
-  });
+  private networkClient = colonyJS.getNetworkClient(
+    NETWORKS[`N${NETWORK_ID}`],
+    {
+      type: 'generic',
+      subtype: 'generic',
+    },
+  );
 
   constructor(
     events: EventEmitter,
