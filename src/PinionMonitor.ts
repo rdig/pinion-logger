@@ -4,7 +4,7 @@ import EventEmitter = require('events');
 
 import IPFSNode from './IPFSNode';
 
-const logMonitor = debug('pinion-monitor:log');
+const logMonitor = debug('pinion-logger:watch');
 
 interface Options {
   ipfsPrivateKey?: string;
@@ -32,11 +32,11 @@ class Pinion {
 
   public async start(): Promise<void> {
     await this.ipfsNode.start();
-    logMonitor(`Monitor ID: ${this.ipfsNode.id}`);
+    logMonitor(`Looger ID: ${this.ipfsNode.id}`);
   }
 
   public async close(): Promise<void> {
-    logMonitor('Closing...');
+    logMonitor('Shutting Down...');
     await this.ipfsNode.stop();
     this.events.removeAllListeners();
   }

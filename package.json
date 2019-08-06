@@ -1,7 +1,7 @@
 {
-  "name": "pinion-monitor",
+  "name": "pinion-logger",
   "version": "1.0.0",
-  "description": "Clandestinely monitor for pubsub messages in a certain room",
+  "description": "Clandestinely log various messages in a pubsub room",
   "bin": {
     "pinion": "bin/index.js"
   },

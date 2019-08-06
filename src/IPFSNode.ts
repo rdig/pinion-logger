@@ -36,10 +36,10 @@ const configFile =
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const config = require(configFile);
 
-const logMonitor = debug('pinion-monitor:log');
+const logMonitor = debug('pinion-logger:watch');
 
-const colonyDiscoveryLogger = debug('pinion-monitor:DISCOVERED_NEW_COLONY');
-const userDiscoveryLogger = debug('pinion-monitor:DISCOVERED_NEW_USER');
+const colonyDiscoveryLogger = debug('pinion-logger:NEW_COLONY');
+const userDiscoveryLogger = debug('pinion-logger:NEW_USER');
 
 class IPFSNode {
   private readonly events: EventEmitter;

@@ -16,5 +16,6 @@ lib
 
 ### production config
 ipfsConfig.production.json
-knownColonies.json
-knownUsers.json
+
+### stats file(s)
+stats
