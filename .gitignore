@@ -1,0 +1,20 @@
+### Standard stuff
+node_modules
+yarn-error.log
+.env
+
+### IPFS node data
+ipfs
+!types/ipfs
+
+### orbit node data
+orbitdb*
+ipfs-test-data
+
+### tsc output
+lib
+
+### production config
+ipfsConfig.production.json
+knownColonies.json
+knownUsers.json
