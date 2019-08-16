@@ -3,9 +3,6 @@ import EventEmitter = require('events');
 import debug = require('debug');
 import FSE = require('fs-extra');
 import colonyJS = require('@colony/colony-js-client');
-import HTTP = require('http');
-import finalhandler = require('finalhandler');
-import serveStatic = require('serve-static');
 
 import customLibp2pBundle from './customLibp2pBundle';
 import { PinnerActions } from './actions';
@@ -28,7 +25,6 @@ const {
   NODE_ENV,
   NETWORK_ID = '5',
   STATS_FILE = 'stats/knownEntities.json',
-  HTTP_PORT = '8000',
 } = process.env;
 
 const configFile =
@@ -70,8 +66,6 @@ class IPFSNode {
     },
   );
 
-  private server;
-
   constructor(
     events: EventEmitter,
     room: string,
@@ -89,14 +83,6 @@ class IPFSNode {
       this.ipfs.on('ready', resolve);
     });
     this.room = room;
-
-    const serve = serveStatic(
-      STATS_FILE.slice(0, STATS_FILE.lastIndexOf('/') + 1),
-    );
-    this.server = HTTP.createServer((req, res) => {
-      const done = finalhandler(req, res);
-      serve(req, res, done);
-    });
 
     FSE.readJson(STATS_FILE, (err, entities) => {
       if (err) {
@@ -202,8 +188,6 @@ class IPFSNode {
       logMonitor(
         `Listening for network: ${NETWORKS[`N${NETWORK_ID}`]} (${NETWORK_ID})`,
       );
-      this.server.listen(HTTP_PORT);
-      logMonitor(`Listening on: http://127.0.0.1:${HTTP_PORT}`);
     } catch (error) {
       /*
        * Fail silently
