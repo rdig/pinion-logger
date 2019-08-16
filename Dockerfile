@@ -1,7 +1,5 @@
 FROM node:10.16
 
-ENV HTTP_PORT 8000
-
 # @FIX Debian Jessie / Docker issue with apt.
 # See: https://stackoverflow.com/questions/46406847/docker-how-to-add-backports-to-sources-list-via-dockerfile
 RUN echo "deb http://archive.debian.org/debian/ jessie main\n" \
@@ -38,7 +36,7 @@ RUN echo "server {\n" \
   "    listen       80;\n" \
   "    server_name  default_server;\n\n" \
   "    location / {\n" \
-  "      proxy_pass http://localhost:$HTTP_PORT;\n" \
+  "        root   /pinion-logger/stats;\n" \
   "    }\n" \
   "}" > /etc/nginx/sites-available/default
 
