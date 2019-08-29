@@ -140,33 +140,35 @@ class IPFSNode {
       }
     }
 
-    return FSE.readJson(STATS_FILE, (err, entities) => {
-      if (err) {
-        return FSE.outputJson(STATS_FILE, blankStats, () => null);
-      }
-      this.networkClient
-        .then(client =>
-          client.lookupRegisteredENSDomain.call({
-            ensAddress: newColonyAddress || newUserAddress,
-          }),
-        )
-        .then(({ domain: ensName }) => {
-          const currentEntities = Object.assign({}, entities);
-          const truncatedEnsName = ensName.slice(0, ensName.indexOf('.'));
-          if (newColonyAddress) {
-            currentEntities.colonies[newColonyAddress] = truncatedEnsName;
-            this.lastKnownColony = newColonyAddress;
-            colonyDiscoveryLogger(newColonyAddress, truncatedEnsName);
-          } else {
-            currentEntities.users[newUserAddress] = truncatedEnsName;
-            this.lastKnownUser = newUserAddress;
-            userDiscoveryLogger(newUserAddress, truncatedEnsName);
-          }
-          FSE.outputJson(STATS_FILE, currentEntities, () => null);
-          this.knownEntities = currentEntities;
-        })
-        .catch();
-    });
+    if (newColonyAddress || newColonyAddress) {
+      return FSE.readJson(STATS_FILE, (err, entities) => {
+        if (err) {
+          return FSE.outputJson(STATS_FILE, blankStats, () => null);
+        }
+        this.networkClient
+          .then(client =>
+            client.lookupRegisteredENSDomain.call({
+              ensAddress: newColonyAddress || newUserAddress,
+            }),
+          )
+          .then(({ domain: ensName }) => {
+            const currentEntities = Object.assign({}, entities);
+            const truncatedEnsName = ensName.slice(0, ensName.indexOf('.'));
+            if (newColonyAddress) {
+              currentEntities.colonies[newColonyAddress] = truncatedEnsName;
+              this.lastKnownColony = newColonyAddress;
+              colonyDiscoveryLogger(newColonyAddress, truncatedEnsName);
+            } else {
+              currentEntities.users[newUserAddress] = truncatedEnsName;
+              this.lastKnownUser = newUserAddress;
+              userDiscoveryLogger(newUserAddress, truncatedEnsName);
+            }
+            FSE.outputJson(STATS_FILE, currentEntities, () => null);
+            this.knownEntities = currentEntities;
+          })
+          .catch();
+      });
+    }
   };
 
   public async getId(): Promise<string> {
